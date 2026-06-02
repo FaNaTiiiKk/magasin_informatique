@@ -7,7 +7,7 @@ app = Flask(__name__)
 db = mysql.connector.connect(
     host="localhost",
     user="root",
-    password="",  # Mets "Password123!" ou ton mot de passe si tu en as défini un
+    password="130321",  # Mets "Password123!" ou ton mot de passe si tu en as défini un
     database="magasin_informatique"
 )
 
@@ -54,3 +54,9 @@ def client(id_client):
         JOIN produits ON produits.id = commandes.id_produit
         WHERE commandes.id_client = %s
     """, (id_client,))
+    produits = cursor.fetchall()
+    cursor.close()
+    return render_template("client.html", produits=produits)
+
+if __name__ == '__main__':
+    app.run(debug=True)
