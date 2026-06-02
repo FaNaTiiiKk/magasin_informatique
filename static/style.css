@@ -1,0 +1,149 @@
+/* STYLE GLOBAL */
+body {
+     font-family: Arial, sans-serif;
+     background: linear-gradient(to right, #eef2f3, #dfe9f3);
+     margin: 0;
+     padding: 0;
+}
+
+/* PAGE ACCUEIL */
+body.accueil {
+     background-image: url("/static/fond.jpg");
+     background-size: cover;
+     background-position: center;
+     height: 100vh;
+}
+
+/* overlay sombre */
+.overlay {
+     background-color: rgba(0, 0, 0, 0.6);
+     height: 100vh;
+     display: flex;
+     flex-direction: column;
+     justify-content: center;
+     align-items: center;
+}
+
+/* TITRES */
+h1 {
+     text-align: center;
+     color: #333;
+}
+
+h2 {
+     text-align: center;
+     background: linear-gradient(90deg, #6a11cb, #2575fc);
+     color: white;
+     padding: 20px;
+     border-radius: 10px;
+     width: fit-content;
+     margin: 0px auto;
+     box-shadow: 0px 4px 10px rgba(0,0,0,0.2);
+}
+
+/* LIENS */
+a {
+     display: inline-block;
+     margin: 10px;
+     padding: 10px 18px;
+     background-color: #007bff;
+     color: white;
+     text-decoration: none;
+     border-radius: 6px;
+     transition: 0.3s;
+}
+
+a:hover {
+     background-color: #0056b3;
+}
+
+/* TABLEAU */
+table {
+     border-collapse: collapse;
+     margin: 20px auto;
+     width: 80%;
+     background-color: white;
+     border-radius: 10px;
+     overflow: hidden;
+}
+
+th {
+     background-color: #007bff;
+     color: white;
+     padding: 12px;
+}
+
+td {
+     padding: 10px;
+     text-align: center;
+}
+
+tr:nth-child(even) {
+     background-color: #f2f2f2;
+}
+
+/* FORMULAIRE */
+form {
+     text-align: center;
+}
+
+input {
+     width: 100%;
+     padding: 10px;
+     margin: 8px 0;
+     border-radius: 6px;
+     border: 1px solid #ccc;
+}
+
+/* BOUTON */
+button {
+     width: 60%;
+     padding: 12px;
+     background: linear-gradient(90deg, #6a11cb, #ad83bd);
+     color: white;
+     border: none;
+     border-radius: 12px;
+     font-weight: bold;
+     cursor: pointer;
+     transition: 0.3s;
+     box-shadow: 0px 4px 10px rgba(0,0,0,0.2);
+}
+
+button:hover {
+     transform: scale(1.05);
+     box-shadow: 0px 8px 15px rgba(0,0,0,0.3);
+}
+
+button:active {
+     transform: scale(0.98);
+}
+
+/* CENTRAGE LOGIN */
+.centrage-form {
+     height: 100vh;
+     display: flex;
+     justify-content: center;
+     align-items: center;
+}
+
+.cadre-login {
+     background: white;
+     padding: 40px 30px;
+     border-radius: 15px;
+     box-shadow: 0px 10px 25px rgba(0,0,0,0.3);
+     text-align: center;
+     width: 320px;
+}
+
+/* TITRE H2 DANS LOGIN */
+.cadre-login h2 {
+     background: none;
+     color: #6a11cb;
+}
+
+/* LOGOUT */
+.logout {
+     position: absolute;
+     top: 20px;
+     right: 20px;
+}
