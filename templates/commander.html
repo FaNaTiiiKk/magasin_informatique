@@ -1,0 +1,24 @@
+<head>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<form action="/passer_commande" method="POST">
+            
+            <div style="margin-bottom: 15px;">
+                <label for="produit" >Choisir un produit :</label>
+                <select name="id_produit" id="produit" style="width: 100%; padding: 8px;" required>
+                    <option value="" disabled selected>-- Sélectionnez un article --</option>
+ 
+                </select>
+            </div>
+
+            <div style="margin-bottom: 20px;">
+                <label for="quantite" >Quantité souhaitée :</label>
+                <input type="number" name="quantite" id="quantite" min="1" value="1" style="width: 95%; padding: 8px;" required>
+            </div>
+
+            <button type="submit">
+                🛒 Commander
+            </button>
+            
+        </form>
