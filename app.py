@@ -1,13 +1,12 @@
 from flask import Flask, render_template, request, redirect, session
-
 import mysql.connector
 
 app = Flask(__name__)
 app.secret_key = 'une_cle_secrete_tres_complexe_a_changer'
 
-# Connexion BDD
+# Connexion BDD (Corrigée sans le "pythin")
 db = mysql.connector.connect(
-    host="127.0.0.1pythin",
+    host="127.0.0.1",
     user="root",
     password="130321",
     database="magasin_informatique"
@@ -117,3 +116,8 @@ def commander(id_client):
 
         # 5- Rediriger le client vers son espace
         return redirect(f"/client/{id_client}")
+
+# Bloc de démarrage (Ajouté pour forcer l'affichage du terminal)
+if __name__ == '__main__':
+    print("Le serveur Flask démarre sur http://127.0.0.1:5000 ...")
+    app.run(host="127.0.0.1", port=5000, debug=True)
