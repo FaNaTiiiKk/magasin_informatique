@@ -56,7 +56,9 @@ def client(id_client):
     """, (id_client,))
     produits = cursor.fetchall()
     cursor.close()
-    return render_template("client.html", produits=produits)
+    
+    # CORRECTION ICI : On transmet "id_client" au template client.html pour que son bouton fonctionne !
+    return render_template("client.html", produits=produits, id_client=id_client)
 
 # COMMANDE
 @app.route("/client/<int:id_client>/commander", methods=["GET", "POST"])
@@ -69,7 +71,6 @@ def commander(id_client):
 
     # Si le client arrive sur la page (GET), on lui affiche le formulaire
     if request.method == "GET":
-        # On récupère la liste des produits pour remplir la liste déroulante du formulaire
         cursor.execute("SELECT id, nom, prix, stock FROM produits")
         liste_produits = cursor.fetchall()
         cursor.close()
@@ -80,8 +81,8 @@ def commander(id_client):
         id_produit = request.form.get("id_produit")
         quantite_demandee = int(request.form.get("quantite"))
 
-        # 1- Vérifier le stock du produit
-        cursor.execute("SELECT stock FROM produits WHERE id=%s", (id_produit,))
+        # 1- Vérifier le stock et récupérer le prix du produit
+        cursor.execute("SELECT prix, stock FROM produits WHERE id=%s", (id_produit,))
         produit = cursor.fetchone()
 
         if not produit:
@@ -92,15 +93,20 @@ def commander(id_client):
             cursor.close()
             return f"Stock insuffisant ! Il ne reste que {produit['stock']} articles."
 
+        prix_unitaire = produit['prix']
+
         try:
-            # 2- Créer une commande dans la table commandes
-            cursor.execute("INSERT INTO commandes (id_client) VALUES (%s)", (id_client,))
+            # 2- Créer une commande dans la table commandes (avec id_client et date_commande)
+            cursor.execute(
+                "INSERT INTO commandes (id_client, date_commande) VALUES (%s, NOW())", 
+                (id_client,)
+            )
             id_commande = cursor.lastrowid
             
-            # 3- Ajouter le détail dans details_commandes avec la vraie quantité
+            # 3- Ajouter le détail dans details_commandes (avec la quantité et le prix_unitaire)
             cursor.execute(
-                "INSERT INTO details_commandes (id_commande, id_produit, quantite) VALUES (%s, %s, %s)", 
-                (id_commande, id_produit, quantite_demandee)
+                "INSERT INTO details_commandes (id_commande, id_produit, quantite, prix_unitaire) VALUES (%s, %s, %s, %s)", 
+                (id_commande, id_produit, quantite_demandee, prix_unitaire)
             )
             
             # 4- Diminuer le stock du produit de la quantité demandée
@@ -117,7 +123,7 @@ def commander(id_client):
         # 5- Rediriger le client vers son espace
         return redirect(f"/client/{id_client}")
 
-# Bloc de démarrage (Ajouté pour forcer l'affichage du terminal)
+# Bloc de démarrage 
 if __name__ == '__main__':
     print("Le serveur Flask démarre sur http://127.0.0.1:5000 ...")
     app.run(host="127.0.0.1", port=5000, debug=True)
