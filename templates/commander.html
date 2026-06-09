@@ -1,30 +1,39 @@
+<!DOCTYPE html>
+<html lang="fr">
 <head>
+    <meta charset="UTF-8">
+    <title>Commander un produit</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
+<body>
 
-<!-- L'action utilise maintenant la route dynamique demandée dans le sujet -->
-<form action="/client/{{ id_client }}/commander" method="POST">
-            
-    <div style="margin-bottom: 15px;">
-        <label for="produit">Choisir un produit :</label>
-        <select name="id_produit" id="produit" style="width: 100%; padding: 8px;" required>
-            <option value="" disabled selected>-- Sélectionnez un article --</option>
-            <!-- Boucle pour afficher chaque produit envoyé depuis Flask -->
+    <h1>Passer une commande</h1>
+
+    <form method="POST">
+        <label>Choisir un produit :</label>
+        <select name="id_produit" required>
             {% for produit in produits %}
-                <option value="{{ produit.id }}">
-                    {{ produit.nom }} (En stock : {{ produit.stock }})
+                <option value="{{ produit[0] }}">
+                    {{ produit[1] }} - {{ produit[2] }} €
                 </option>
             {% endfor %}
         </select>
-    </div>
 
-    <div style="margin-bottom: 20px;">
-        <label for="quantite">Quantité souhaitée :</label>
-        <input type="number" name="quantite" id="quantite" min="1" value="1" style="width: 95%; padding: 8px;" required>
-    </div>
+        <br><br>
 
-    <button type="submit">
-        🛒 Commander
-    </button>
+        <label>Quantité :</label>
+        <input type="number" name="quantite" min="1" required>
+
+        <br><br>
+
+        <button type="submit">Commander</button>
+    </form>
+
+    <br>
+
+    <a href="/client/{{ id_client }}">Retour espace client</a>
+
+</body>
+</html>
     
 </form>

@@ -21,4 +21,31 @@
     <td>{{ p.quantite }}</td>
 </tr>
 {% endfor %}
+<<<<<<< HEAD
+</table>
+<head>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<h2>Espace Client</h2>
+
+<a href="/">Se déconnecter</a>
+
+<h3>Mes produits achetés</h3>
+
+<table border="1">
+<tr>
+    <th>Produit</th>
+    <th>Prix</th>
+    <th>Quantité</th>
+</tr>
+
+{% for p in produits %}
+<tr>
+    <td>{{ p.nom }}</td>
+    <td>{{ p.prix }}</td>
+    <td>{{ p.quantite }}</td>
+</tr>
+{% endfor %}
+=======
+>>>>>>> 4c3ddc602648f48a3852ab9e62623cee135d6735
 </table>
