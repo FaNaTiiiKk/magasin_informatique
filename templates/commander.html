@@ -10,19 +10,20 @@
     <h1>Passer une commande</h1>
 
     <form method="POST">
-        <label>Choisir un produit :</label>
-        <select name="id_produit" required>
+        <label for="id_produit">Choisir un produit :</label>
+        <select name="id_produit" id="id_produit" required>
+            <option value="">-- Sélectionnez un produit --</option>
             {% for produit in produits %}
-                <option value="{{ produit[0] }}">
-                    {{ produit[1] }} - {{ produit[2] }} €
+                <option value="{{ produit['id'] }}">
+                    {{ produit['nom'] }} - {{ produit['prix'] }} € (Stock : {{ produit['stock'] }})
                 </option>
             {% endfor %}
         </select>
 
         <br><br>
 
-        <label>Quantité :</label>
-        <input type="number" name="quantite" min="1" required>
+        <label for="quantite">Quantité :</label>
+        <input type="number" name="quantite" id="quantite" min="1" value="1" required>
 
         <br><br>
 
@@ -35,5 +36,3 @@
 
 </body>
 </html>
-    
-</form>

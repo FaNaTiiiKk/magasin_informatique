@@ -7,7 +7,7 @@ app.secret_key = 'une_cle_secrete_tres_complexe_a_changer'
 
 # Connexion BDD
 db = mysql.connector.connect(
-    host="127.0.0.1",
+    host="127.0.0.1pythin",
     user="root",
     password="130321",
     database="magasin_informatique"
@@ -60,37 +60,60 @@ def client(id_client):
     return render_template("client.html", produits=produits)
 
 # COMMANDE
-@app.route("/client/<int:id_client>/commander/<int:id_produit>", methods=["POST"])
-def commander(id_client, id_produit):
+@app.route("/client/<int:id_client>/commander", methods=["GET", "POST"])
+def commander(id_client):
+    # Vérification de sécurité
     if 'client_id' not in session or session['client_id'] != id_client:
         return redirect("/login")
 
-    cursor = db.cursor(dictionary=True)
-    
-    cursor.execute("SELECT stock FROM produits WHERE id=%s", (id_produit,))
-    produit = cursor.fetchone()
-    
-    if not produit or produit['stock'] <= 0:
+    cursor = db.cursor(dictionary=True, buffered=True)
+
+    # Si le client arrive sur la page (GET), on lui affiche le formulaire
+    if request.method == "GET":
+        # On récupère la liste des produits pour remplir la liste déroulante du formulaire
+        cursor.execute("SELECT id, nom, prix, stock FROM produits")
+        liste_produits = cursor.fetchall()
         cursor.close()
-        return "Produit indisponible"
+        return render_template("commander.html", id_client=id_client, produits=liste_produits)
 
-    try:
-        cursor.execute("INSERT INTO commandes (id_client) VALUES (%s)", (id_client,))
-        id_commande = cursor.lastrowid
-        
-        cursor.execute("INSERT INTO details_commandes (id_commande, id_produit, quantite) VALUES (%s, %s, 1)", 
-                       (id_commande, id_produit))
-        
-        cursor.execute("UPDATE produits SET stock = stock - 1 WHERE id=%s", (id_produit,))
-        
-        db.commit()
-    except Exception as e:
-        db.rollback()
-        return f"Erreur lors de la commande : {e}"
-    finally:
-        cursor.close()
+    # Si le client valide le formulaire (POST)
+    if request.method == "POST":
+        id_produit = request.form.get("id_produit")
+        quantite_demandee = int(request.form.get("quantite"))
 
-    return redirect(f"/client/{id_client}")
+        # 1- Vérifier le stock du produit
+        cursor.execute("SELECT stock FROM produits WHERE id=%s", (id_produit,))
+        produit = cursor.fetchone()
 
-if __name__ == '__main__':
-    app.run(debug=True)
+        if not produit:
+            cursor.close()
+            return "Produit introuvable."
+
+        if produit['stock'] < quantite_demandee:
+            cursor.close()
+            return f"Stock insuffisant ! Il ne reste que {produit['stock']} articles."
+
+        try:
+            # 2- Créer une commande dans la table commandes
+            cursor.execute("INSERT INTO commandes (id_client) VALUES (%s)", (id_client,))
+            id_commande = cursor.lastrowid
+            
+            # 3- Ajouter le détail dans details_commandes avec la vraie quantité
+            cursor.execute(
+                "INSERT INTO details_commandes (id_commande, id_produit, quantite) VALUES (%s, %s, %s)", 
+                (id_commande, id_produit, quantite_demandee)
+            )
+            
+            # 4- Diminuer le stock du produit de la quantité demandée
+            cursor.execute("UPDATE produits SET stock = stock - %s WHERE id=%s", (quantite_demandee, id_produit))
+            
+            # Validation de la transaction
+            db.commit()
+        except Exception as e:
+            db.rollback()
+            return f"Erreur lors de la commande : {e}"
+        finally:
+            cursor.close()
+
+        # 5- Rediriger le client vers son espace
+        return redirect(f"/client/{id_client}")
