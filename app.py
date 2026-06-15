@@ -1,10 +1,12 @@
 from flask import Flask, render_template, request, redirect, session
 import mysql.connector
+# IMPORTATION : On ajoute la bibliothèque bcrypt pour vérifier le mot de passe
+import bcrypt
 
 app = Flask(__name__)
 app.secret_key = 'une_cle_secrete_tres_complexe_a_changer'
 
-# Connexion BDD (Corrigée sans le "pythin")
+# Connexion BDD
 db = mysql.connector.connect(
     host="127.0.0.1",
     user="root",
@@ -25,24 +27,36 @@ def login():
         password = request.form["password"]
         cursor = db.cursor(dictionary=True, buffered=True)
 
+        # Compte admin de secours (en clair)
         if email == "admin" and password == "1234":
+            cursor.close()
             return redirect("/admin")
 
-        cursor.execute("SELECT * FROM clients WHERE email=%s AND password=%s", (email, password))
+        # MODIFICATION 1 : On cherche l'utilisateur UNIQUEMENT par son email
+        cursor.execute("SELECT * FROM clients WHERE email=%s", (email,))
         client = cursor.fetchone()
         cursor.close()
 
         if client:
-            session['client_id'] = client['id']
-            return redirect(f"/client/{client['id']}")
+            # On récupère le mot de passe haché de la BDD et on le convertit en bytes
+            hashed_password_bdd = client['password'].encode('utf-8')
+            # On convertit le mot de passe saisi en clair par l'utilisateur en bytes
+            password_saisi_bytes = password.encode('utf-8')
+
+            # MODIFICATION 2 : On utilise bcrypt pour comparer le mot de passe en clair et le hash
+            if bcrypt.checkpw(password_saisi_bytes, hashed_password_bdd):
+                session['client_id'] = client['id']
+                return redirect(f"/client/{client['id']}")
+            else:
+                return "Erreur login (Mot de passe incorrect)"
         else:
-            return "Erreur login"
+            return "Erreur login (Email introuvable)"
+            
     return render_template("login.html")
 
 # PAGE CLIENT
 @app.route("/client/<int:id_client>")
 def client(id_client):
-    # Vérification de sécurité
     if 'client_id' not in session or session['client_id'] != id_client:
         return redirect("/login")
         
@@ -57,31 +71,26 @@ def client(id_client):
     produits = cursor.fetchall()
     cursor.close()
     
-    # CORRECTION ICI : On transmet "id_client" au template client.html pour que son bouton fonctionne !
     return render_template("client.html", produits=produits, id_client=id_client)
 
 # COMMANDE
 @app.route("/client/<int:id_client>/commander", methods=["GET", "POST"])
 def commander(id_client):
-    # Vérification de sécurité
     if 'client_id' not in session or session['client_id'] != id_client:
         return redirect("/login")
 
     cursor = db.cursor(dictionary=True, buffered=True)
 
-    # Si le client arrive sur la page (GET), on lui affiche le formulaire
     if request.method == "GET":
         cursor.execute("SELECT id, nom, prix, stock FROM produits")
         liste_produits = cursor.fetchall()
         cursor.close()
         return render_template("commander.html", id_client=id_client, produits=liste_produits)
 
-    # Si le client valide le formulaire (POST)
     if request.method == "POST":
         id_produit = request.form.get("id_produit")
         quantite_demandee = int(request.form.get("quantite"))
 
-        # 1- Vérifier le stock et récupérer le prix du produit
         cursor.execute("SELECT prix, stock FROM produits WHERE id=%s", (id_produit,))
         produit = cursor.fetchone()
 
@@ -96,23 +105,18 @@ def commander(id_client):
         prix_unitaire = produit['prix']
 
         try:
-            # 2- Créer une commande dans la table commandes (avec id_client et date_commande)
             cursor.execute(
                 "INSERT INTO commandes (id_client, date_commande) VALUES (%s, NOW())", 
                 (id_client,)
             )
             id_commande = cursor.lastrowid
             
-            # 3- Ajouter le détail dans details_commandes (avec la quantité et le prix_unitaire)
             cursor.execute(
                 "INSERT INTO details_commandes (id_commande, id_produit, quantite, prix_unitaire) VALUES (%s, %s, %s, %s)", 
                 (id_commande, id_produit, quantite_demandee, prix_unitaire)
             )
             
-            # 4- Diminuer le stock du produit de la quantité demandée
             cursor.execute("UPDATE produits SET stock = stock - %s WHERE id=%s", (quantite_demandee, id_produit))
-            
-            # Validation de la transaction
             db.commit()
         except Exception as e:
             db.rollback()
@@ -120,10 +124,8 @@ def commander(id_client):
         finally:
             cursor.close()
 
-        # 5- Rediriger le client vers son espace
         return redirect(f"/client/{id_client}")
 
-# Bloc de démarrage 
 if __name__ == '__main__':
     print("Le serveur Flask démarre sur http://127.0.0.1:5000 ...")
     app.run(host="127.0.0.1", port=5000, debug=True)
