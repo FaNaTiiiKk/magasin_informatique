@@ -1,10 +1,12 @@
 from flask import Flask, render_template, request, redirect, session
 import mysql.connector
+# AJOUT : Importation des outils de hachage sécurisés de Werkzeug
+from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
 app.secret_key = 'une_cle_secrete_tres_complexe_a_changer'
 
-# Connexion BDD (Corrigée sans le "pythin")
+# Connexion BDD
 db = mysql.connector.connect(
     host="127.0.0.1",
     user="root",
@@ -17,7 +19,7 @@ db = mysql.connector.connect(
 def accueil():
     return render_template("accueil.html")
 
-# LOGIN
+# LOGIN (Modifié pour la migration des mots de passe en clair à la volée)
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
@@ -25,18 +27,50 @@ def login():
         password = request.form["password"]
         cursor = db.cursor(dictionary=True, buffered=True)
 
+        # Compte admin statique (Inchangé)
         if email == "admin" and password == "1234":
             return redirect("/admin")
 
-        cursor.execute("SELECT * FROM clients WHERE email=%s AND password=%s", (email, password))
+        # 1. On cherche d'abord l'utilisateur UNIQUEMENT par son email
+        cursor.execute("SELECT * FROM clients WHERE email=%s", (email,))
         client = cursor.fetchone()
-        cursor.close()
 
         if client:
-            session['client_id'] = client['id']
-            return redirect(f"/client/{client['id']}")
+            password_bdd = client['password']
+
+            # 2. Détecter si le mot de passe en BDD est déjà haché
+            # Les hashs de Werkzeug commencent par un préfixe d'algorithme (ex: 'scrypt:', 'pbkdf2:')
+            is_hashed = password_bdd.startswith(('scrypt:', 'pbkdf2:', 'bcrypt'))
+
+            if not is_hashed:
+                # ─── CAS 1 : Le mot de passe en BDD est encore en clair ───
+                if password == password_bdd:
+                    # Le mot de passe saisi est correct. On génère un hash sécurisé.
+                    new_hash = generate_password_hash(password)
+                    
+                    # On met à jour la ligne du client pour remplacer le texte en clair par le hash
+                    cursor.execute("UPDATE clients SET password=%s WHERE id=%s", (new_hash, client['id']))
+                    db.commit() # Très important pour valider la modification en BDD
+                    cursor.close()
+
+                    # Connexion et redirection vers l'espace client
+                    session['client_id'] = client['id']
+                    return redirect(f"/client/{client['id']}")
+                else:
+                    cursor.close()
+                    return "Erreur login"
+            else:
+                # ─── CAS 2 : Le mot de passe en BDD est déjà haché sécurisé ───
+                cursor.close()
+                if check_password_hash(password_bdd, password):
+                    session['client_id'] = client['id']
+                    return redirect(f"/client/{client['id']}")
+                else:
+                    return "Erreur login"
         else:
+            cursor.close()
             return "Erreur login"
+
     return render_template("login.html")
 
 # PAGE CLIENT
@@ -57,7 +91,6 @@ def client(id_client):
     produits = cursor.fetchall()
     cursor.close()
     
-    # CORRECTION ICI : On transmet "id_client" au template client.html pour que son bouton fonctionne !
     return render_template("client.html", produits=produits, id_client=id_client)
 
 # COMMANDE
@@ -69,7 +102,7 @@ def commander(id_client):
 
     cursor = db.cursor(dictionary=True, buffered=True)
 
-    # Si le client arrive sur la page (GET), on lui affiche le formulaire
+    # Si le client arrive sur la page (GET)
     if request.method == "GET":
         cursor.execute("SELECT id, nom, prix, stock FROM produits")
         liste_produits = cursor.fetchall()
@@ -96,23 +129,22 @@ def commander(id_client):
         prix_unitaire = produit['prix']
 
         try:
-            # 2- Créer une commande dans la table commandes (avec id_client et date_commande)
+            # 2- Créer une commande
             cursor.execute(
                 "INSERT INTO commandes (id_client, date_commande) VALUES (%s, NOW())", 
                 (id_client,)
             )
             id_commande = cursor.lastrowid
             
-            # 3- Ajouter le détail dans details_commandes (avec la quantité et le prix_unitaire)
+            # 3- Ajouter le détail
             cursor.execute(
                 "INSERT INTO details_commandes (id_commande, id_produit, quantite, prix_unitaire) VALUES (%s, %s, %s, %s)", 
                 (id_commande, id_produit, quantite_demandee, prix_unitaire)
             )
             
-            # 4- Diminuer le stock du produit de la quantité demandée
+            # 4- Diminuer le stock
             cursor.execute("UPDATE produits SET stock = stock - %s WHERE id=%s", (quantite_demandee, id_produit))
             
-            # Validation de la transaction
             db.commit()
         except Exception as e:
             db.rollback()
@@ -120,7 +152,6 @@ def commander(id_client):
         finally:
             cursor.close()
 
-        # 5- Rediriger le client vers son espace
         return redirect(f"/client/{id_client}")
 
 # Bloc de démarrage 
