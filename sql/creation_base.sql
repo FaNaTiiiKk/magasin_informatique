@@ -1,3 +1,4 @@
+DROP DATABASE IF EXISTS magasin_informatique;
 CREATE DATABASE magasin_informatique;
 USE magasin_informatique;
 
@@ -6,11 +7,12 @@ CREATE TABLE clients (
     nom VARCHAR(50) NOT NULL,
     prenom VARCHAR(50) NOT NULL,
     email VARCHAR(100) NOT NULL UNIQUE,
-    password VARCHAR(255) NOT NULL, -- Modifié directement ici à 255
+    password VARCHAR(255) NOT NULL, -- Taille augmentée à 255 pour accueillir les futurs hashs
     adresse VARCHAR(150),
     telephone VARCHAR(20),
     PRIMARY KEY (id)
 );
+
 CREATE TABLE produits (
     id INT AUTO_INCREMENT,
     nom VARCHAR(100) NOT NULL,
@@ -22,6 +24,7 @@ CREATE TABLE produits (
     CHECK (prix >= 0),
     CHECK (stock >= 0)
 );
+
 CREATE TABLE commandes (
     id INT AUTO_INCREMENT,
     id_client INT NOT NULL,
@@ -31,6 +34,7 @@ CREATE TABLE commandes (
     PRIMARY KEY (id),
     FOREIGN KEY (id_client) REFERENCES clients(id)
 );
+
 CREATE TABLE details_commandes (
     id INT AUTO_INCREMENT,
     id_commande INT NOT NULL,

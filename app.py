@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request, redirect, session
 import mysql.connector
-# AJOUT : Importation des outils de hachage sécurisés de Werkzeug
+# Importation des outils de hachage sécurisés de Werkzeug
 from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
@@ -19,19 +19,20 @@ db = mysql.connector.connect(
 def accueil():
     return render_template("accueil.html")
 
-# LOGIN (Modifié pour la migration des mots de passe en clair à la volée)
+# LOGIN (Migration des mots de passe en clair à la volée)
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
-        email = request.form["email"]
-        password = request.form["password"]
+        email = request.form["email"].strip()
+        password = request.form["password"].strip()
         cursor = db.cursor(dictionary=True, buffered=True)
 
-        # Compte admin statique (Inchangé)
+        # Compte admin statique
         if email == "admin" and password == "1234":
+            cursor.close()
             return redirect("/admin")
 
-        # 1. On cherche d'abord l'utilisateur UNIQUEMENT par son email
+        # 1. Recherche de l'utilisateur par son email unique
         cursor.execute("SELECT * FROM clients WHERE email=%s", (email,))
         client = cursor.fetchone()
 
@@ -39,28 +40,27 @@ def login():
             password_bdd = client['password']
 
             # 2. Détecter si le mot de passe en BDD est déjà haché
-            # Les hashs de Werkzeug commencent par un préfixe d'algorithme (ex: 'scrypt:', 'pbkdf2:')
             is_hashed = password_bdd.startswith(('scrypt:', 'pbkdf2:', 'bcrypt'))
 
             if not is_hashed:
                 # ─── CAS 1 : Le mot de passe en BDD est encore en clair ───
                 if password == password_bdd:
-                    # Le mot de passe saisi est correct. On génère un hash sécurisé.
+                    # Génération du hash sécurisé
                     new_hash = generate_password_hash(password)
                     
-                    # On met à jour la ligne du client pour remplacer le texte en clair par le hash
+                    # Mise à jour de la ligne en BDD
                     cursor.execute("UPDATE clients SET password=%s WHERE id=%s", (new_hash, client['id']))
-                    db.commit() # Très important pour valider la modification en BDD
+                    db.commit()
                     cursor.close()
 
-                    # Connexion et redirection vers l'espace client
+                    # Connexion
                     session['client_id'] = client['id']
                     return redirect(f"/client/{client['id']}")
                 else:
                     cursor.close()
                     return "Erreur login"
             else:
-                # ─── CAS 2 : Le mot de passe en BDD est déjà haché sécurisé ───
+                # ─── CAS 2 : Le mot de passe en BDD est déjà haché ───
                 cursor.close()
                 if check_password_hash(password_bdd, password):
                     session['client_id'] = client['id']
@@ -76,7 +76,6 @@ def login():
 # PAGE CLIENT
 @app.route("/client/<int:id_client>")
 def client(id_client):
-    # Vérification de sécurité
     if 'client_id' not in session or session['client_id'] != id_client:
         return redirect("/login")
         
@@ -96,25 +95,21 @@ def client(id_client):
 # COMMANDE
 @app.route("/client/<int:id_client>/commander", methods=["GET", "POST"])
 def commander(id_client):
-    # Vérification de sécurité
     if 'client_id' not in session or session['client_id'] != id_client:
         return redirect("/login")
 
     cursor = db.cursor(dictionary=True, buffered=True)
 
-    # Si le client arrive sur la page (GET)
     if request.method == "GET":
         cursor.execute("SELECT id, nom, prix, stock FROM produits")
         liste_produits = cursor.fetchall()
         cursor.close()
         return render_template("commander.html", id_client=id_client, produits=liste_produits)
 
-    # Si le client valide le formulaire (POST)
     if request.method == "POST":
         id_produit = request.form.get("id_produit")
         quantite_demandee = int(request.form.get("quantite"))
 
-        # 1- Vérifier le stock et récupérer le prix du produit
         cursor.execute("SELECT prix, stock FROM produits WHERE id=%s", (id_produit,))
         produit = cursor.fetchone()
 
@@ -129,22 +124,18 @@ def commander(id_client):
         prix_unitaire = produit['prix']
 
         try:
-            # 2- Créer une commande
             cursor.execute(
                 "INSERT INTO commandes (id_client, date_commande) VALUES (%s, NOW())", 
                 (id_client,)
             )
             id_commande = cursor.lastrowid
             
-            # 3- Ajouter le détail
             cursor.execute(
                 "INSERT INTO details_commandes (id_commande, id_produit, quantite, prix_unitaire) VALUES (%s, %s, %s, %s)", 
                 (id_commande, id_produit, quantite_demandee, prix_unitaire)
             )
             
-            # 4- Diminuer le stock
             cursor.execute("UPDATE produits SET stock = stock - %s WHERE id=%s", (quantite_demandee, id_produit))
-            
             db.commit()
         except Exception as e:
             db.rollback()
@@ -154,7 +145,7 @@ def commander(id_client):
 
         return redirect(f"/client/{id_client}")
 
-# Bloc de démarrage 
+# Bloc de démarrage unique
 if __name__ == '__main__':
     print("Le serveur Flask démarre sur http://127.0.0.1:5000 ...")
     app.run(host="127.0.0.1", port=5000, debug=True)
