@@ -66,6 +66,10 @@ def inscription():
         telephone = request.form["telephone"]
         adresse = request.form["adresse"]
 
+        # VÉRIFICATION DE SÉCURITÉ : Minimum 12 caractères
+        if len(password) < 12:
+            return "Erreur : Le mot de passe doit contenir au moins 12 caractères."
+
         cursor = db.cursor(dictionary=True, buffered=True)
 
         # 1. Vérifier si l'email existe déjà dans la base de données
@@ -83,8 +87,6 @@ def inscription():
 
         # 3. Insertion du nouveau client dans la table 'clients'
         try:
-            # /!\ Important : Vérifie bien que les noms de colonnes ci-dessous 
-            # correspondent exactement à ceux de ta table MySQL
             cursor.execute("""
                 INSERT INTO clients (nom, prenom, email, password, telephone, adresse) 
                 VALUES (%s, %s, %s, %s, %s, %s)
