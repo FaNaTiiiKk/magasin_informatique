@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mon Panier</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<div class="container" style="padding: 20px; font-family: Arial, sans-serif;">
+    <h2>🛒 Mon Panier</h2>
+
+    {% if not panier %}
+        <p>Votre panier est vide.</p>
+        <a href="/client/{{ id_client }}/commander" style="color: #6a11cb;">Retourner aux produits</a>
+    {% else %}
+        <table border="1" cellpadding="10" style="border-collapse: collapse; width: 100%; margin-bottom: 20px;">
+            <thead>
+                <tr style="background-color: #f2f2f2;">
+                    <th>Nom du produit</th>
+                    <th>Prix unitaire</th>
+                    <th>Quantité</th>
+                    <th>Sous-total</th>
+                    <th>Action</th> </tr>
+            </thead>
+            <tbody>
+                {% for article in panier %}
+                <tr>
+                    <td>{{ article.nom }}</td>
+                    <td>{{ article.prix }} €</td>
+                    <td>{{ article.quantite }}</td>
+                    <td>{{ article.sous_total }} €</td>
+                    <td>
+                        <a href="/client/{{ id_client }}/panier/supprimer/{{ article.id }}" 
+                           style="padding: 5px 10px; background: linear-gradient(90deg, #6a11cb, #b72e87); color: white; text-decoration: none; border-radius: 3px; font-size: 13px;"
+                           onclick="return confirm('Supprimer cet article du panier ?');">
+                           🗑️ Supprimer
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <h3>Total à payer : <span style="color: #27ae60;">{{ total }} €</span></h3>
+
+        <div style="margin-top: 20px;">
+            <a href="/client/{{ id_client }}/commander">Continuer mes achats</a>
+            
+            <a href="/client/{{ id_client }}/panier/confirmation">Valider et Commander</a>
+        </div>
+    {% endif %}
+</div>
+
+</body>
+</html>

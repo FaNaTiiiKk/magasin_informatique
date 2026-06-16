@@ -1,6 +1,5 @@
 from flask import Flask, render_template, request, redirect, session
 import mysql.connector
-# IMPORTATION : On ajoute la bibliothèque bcrypt pour vérifier le mot de passe
 import bcrypt
 # MODIFICATION : Importation de Flask-Mail pour l'envoi de e-mails
 from flask_mail import Mail, Message
@@ -9,7 +8,6 @@ app = Flask(__name__)
 app.secret_key = 'une_cle_secrete_tres_complexe_a_changer'
 
 # MODIFICATION : Configuration de Flask-Mail (Exemple avec Gmail)
-# N'oublie pas de générer un "Mot de passe d'application" dans ton compte Google !
 app.config['MAIL_SERVER'] = 'smtp.gmail.com'
 app.config['MAIL_PORT'] = 587
 app.config['MAIL_USE_TLS'] = True
@@ -17,9 +15,10 @@ app.config['MAIL_USERNAME'] = 'votre_adresse_email@gmail.com'
 app.config['MAIL_PASSWORD'] = 'votre_mot_de_passe_d_application'
 app.config['MAIL_DEFAULT_SENDER'] = ('Magasin Informatique', 'votre_adresse_email@gmail.com')
 
-# Initialisation de l'extension Mail pour que la variable "mail" soit reconnue globalement
+# Initialisation globale de l'extension Mail
 mail = Mail(app)
 
+# Connexion BDD globale (Variable "db" bien définie à la racine)
 db = mysql.connector.connect(
     host="127.0.0.1",
     user="root",
@@ -51,19 +50,14 @@ def login():
         cursor.close()
 
         if client:
-            # On récupère le mot de passe haché de la BDD et on le convertit en bytes
             hashed_password_bdd = client['password'].encode('utf-8')
-            # On convertit le mot de passe saisi en clair par l'utilisateur en bytes
             password_saisi_bytes = password.encode('utf-8')
 
-            # On utilise bcrypt pour comparer le mot de passe en clair et le hash
             if bcrypt.checkpw(password_saisi_bytes, hashed_password_bdd):
-                
-                # MODIFICATION : VÉRIFICATION DU STATUT DE VALIDATION DU MAIL
-                if client['is_verified'] == 0:
+                # SÉCURITÉ : Bloquer si l'adresse e-mail n'est pas encore validée
+                if client.get('is_verified') == 0:
                     return "Erreur login : Veuillez vérifier votre boîte mail et valider votre compte avant de vous connecter."
                 
-                # Si le compte est vérifié (is_verified == 1), on connecte l'utilisateur
                 session['client_id'] = client['id']
                 return redirect(f"/client/{client['id']}")
             else:
@@ -77,7 +71,6 @@ def login():
 @app.route("/inscription", methods=["GET", "POST"])
 def inscription():
     if request.method == "POST":
-        # Récupération des données du formulaire HTML
         nom = request.form["nom"]
         prenom = request.form["prenom"]
         email = request.form["email"]
@@ -85,13 +78,13 @@ def inscription():
         telephone = request.form["telephone"]
         adresse = request.form["adresse"]
 
-        # 1. VÉRIFICATION DE SÉCURITÉ : Minimum 12 caractères
+        # VÉRIFICATION : Minimum 12 caractères
         if len(password) < 12:
             return "Erreur : Le mot de passe doit contenir au moins 12 caractères."
 
         cursor = db.cursor(dictionary=True, buffered=True)
 
-        # 2. Vérifier si l'email existe déjà dans la base de données
+        # Vérifier si l'email existe déjà
         cursor.execute("SELECT * FROM clients WHERE email=%s", (email,))
         compte_existant = cursor.fetchone()
 
@@ -99,43 +92,39 @@ def inscription():
             cursor.close()
             return "Erreur : Cet email est déjà utilisé par un autre compte."
 
-        # 3. Hachage du mot de passe avec bcrypt
-        password_bytes = password.encode('utf-8')  # Conversion de la chaîne en bytes
-        salt = bcrypt.gensalt()                     # Génération du sel de sécurité
-        hashed_password = bcrypt.hashpw(password_bytes, salt).decode('utf-8') # Hachage et conversion en chaîne
+        # Hachage du mot de passe
+        password_bytes = password.encode('utf-8')
+        salt = bcrypt.gensalt()
+        hashed_password = bcrypt.hashpw(password_bytes, salt).decode('utf-8')
 
-        # 4. Insertion du nouveau client dans la table 'clients' avec is_verified = 0
+        # Insertion avec is_verified initialisé à 0
         try:
             cursor.execute("""
                 INSERT INTO clients (nom, prenom, email, password, telephone, adresse, is_verified) 
                 VALUES (%s, %s, %s, %s, %s, %s, %s)
-            """, (nom, prenom, email, hashed_password, telephone, adresse, 0)) # 0 = Non vérifié par défaut
+            """, (nom, prenom, email, hashed_password, telephone, adresse, 0))
             
-            db.commit() # Validation de l'insertion en BDD
+            db.commit()
             
-            # 5. Envoi de l'e-mail de confirmation d'inscription
+            # Envoi du mail de confirmation d'inscription
             try:
                 msg = Message(
                     subject="Confirmation de votre inscription !",
-                    recipients=[email]  # Envoyer à l'adresse e-mail saisie par le client
+                    recipients=[email]
                 )
                 msg.body = f"Bonjour {prenom},\n\nVotre inscription sur notre site de Magasin Informatique a bien été validée.\n\nMerci pour votre confiance !\nL'équipe de support."
-                
                 mail.send(msg)
             except Exception as mail_error:
-                # On capture l'erreur pour éviter de bloquer l'utilisateur si le serveur d'e-mail a un problème
                 print(f"Erreur lors de l'envoi du mail : {mail_error}")
 
         except Exception as e:
-            db.rollback() # En cas d'erreur de base de données, on annule
+            db.rollback()
             return f"Erreur lors de l'inscription : {e}"
         finally:
             cursor.close()
 
-        # Redirection automatique vers la page de connexion après inscription réussie
         return redirect("/login")
 
-    # Si la requête est en GET (accès direct à l'URL), on affiche le formulaire
     return render_template("inscription.html")
 
 # PAGE CLIENT
@@ -157,7 +146,25 @@ def client(id_client):
     
     return render_template("client.html", produits=produits, id_client=id_client)
 
-# COMMANDE
+# SUPPRIMER UN ARTICLE DU PANIER
+@app.route("/client/<int:id_client>/panier/supprimer/<id_produit>")
+def supprimer_du_panier(id_client, id_produit):
+    if 'client_id' not in session or session['client_id'] != id_client:
+        return redirect("/login")
+
+    # On vérifie si le panier existe en session
+    if 'panier' in session:
+        panier = session['panier']
+        # Si le produit est bien dans le panier, on le supprime
+        if id_produit in panier:
+            panier.pop(id_produit)
+            # On signale à Flask que la session a été modifiée
+            session.modified = True
+
+    # On redirige l'utilisateur vers la page du panier mis à jour
+    return redirect(f"/client/{id_client}/panier")
+
+# ENREGISTRER UN ACHAT DANS LE PANIER TEMPORAIRE
 @app.route("/client/<int:id_client>/commander", methods=["GET", "POST"])
 def commander(id_client):
     if 'client_id' not in session or session['client_id'] != id_client:
@@ -175,40 +182,142 @@ def commander(id_client):
         id_produit = request.form.get("id_produit")
         quantite_demandee = int(request.form.get("quantite"))
 
-        cursor.execute("SELECT prix, stock FROM produits WHERE id=%s", (id_produit,))
+        cursor.execute("SELECT nom, stock FROM produits WHERE id=%s", (id_produit,))
         produit = cursor.fetchone()
+        cursor.close()
 
         if not produit:
-            cursor.close()
             return "Produit introuvable."
 
         if produit['stock'] < quantite_demandee:
-            cursor.close()
             return f"Stock insuffisant ! Il ne reste que {produit['stock']} articles."
 
-        prix_unitaire = produit['prix']
+        if 'panier' not in session:
+            session['panier'] = {}
+        
+        panier = session['panier']
+        
+        if id_produit in panier:
+            panier[id_produit] += quantite_demandee
+        else:
+            panier[id_produit] = quantite_demandee
+            
+        session.modified = True
+        return redirect(f"/client/{id_client}/panier")
 
-        try:
-            cursor.execute(
-                "INSERT INTO commandes (id_client, date_commande) VALUES (%s, NOW())", 
-                (id_client,)
-            )
-            id_commande = cursor.lastrowid
+# VUE DU PANIER
+@app.route("/client/<int:id_client>/panier")
+def voir_panier(id_client):
+    if 'client_id' not in session or session['client_id'] != id_client:
+        return redirect("/login")
+
+    panier = session.get('panier', {})
+    liste_produits_panier = []
+    total_panier = 0
+
+    if panier:
+        cursor = db.cursor(dictionary=True, buffered=True)
+        for id_produit, quantite in panier.items():
+            cursor.execute("SELECT id, nom, prix FROM produits WHERE id=%s", (id_produit,))
+            produit = cursor.fetchone()
+            
+            if produit:
+                subtotal = produit['prix'] * quantite
+                total_panier += subtotal
+                liste_produits_panier.append({
+                    'id': produit['id'],
+                    'nom': produit['nom'],
+                    'prix': produit['prix'],
+                    'quantite': quantite,
+                    'sous_total': subtotal
+                })
+        cursor.close()
+
+    return render_template("panier.html", id_client=id_client, panier=liste_produits_panier, total=total_panier)
+
+# PAGE INTERMÉDIAIRE : CONFIRMATION DES INFOS & ARTICLES (CORRIGÉE)
+@app.route("/client/<int:id_client>/panier/confirmation")
+def confirmation_panier(id_client):
+    if 'client_id' not in session or session['client_id'] != id_client:
+        return redirect("/login")
+
+    panier = session.get('panier', {})
+    if not panier:
+        return redirect(f"/client/{id_client}/panier")
+
+    cursor = db.cursor(dictionary=True, buffered=True)
+    
+    # Récupération des informations de profil du client pour livraison
+    cursor.execute("SELECT nom, prenom, adresse, telephone FROM clients WHERE id=%s", (id_client,))
+    client_info = cursor.fetchone()
+
+    liste_produits_panier = []
+    total_panier = 0
+    
+    for id_produit, quantite in panier.items():
+        cursor.execute("SELECT nom, prix FROM produits WHERE id=%s", (id_produit,))
+        produit = cursor.fetchone()
+        if produit:
+            # CORRECTION DE LA FAUTE DE FRAPPE ICI
+            subtotal = produit['prix'] * quantite
+            total_panier += subtotal
+            liste_produits_panier.append({
+                'nom': produit['nom'],
+                'prix': produit['prix'],
+                'quantite': quantite,
+                'sous_total': subtotal
+            })
+            
+    cursor.close()
+    return render_template("confirmation.html", id_client=id_client, panier=liste_produits_panier, total=total_panier, client=client_info)
+
+# ACTION FINALE : ENREGISTREMENT BDD ET VIDAGE DE SESSION
+@app.route("/client/<int:id_client>/panier/finaliser")
+def finaliser_panier(id_client):
+    if 'client_id' not in session or session['client_id'] != id_client:
+        return redirect("/login")
+
+    panier = session.get('panier', {})
+    if not panier:
+        return "Votre panier est vide."
+
+    cursor = db.cursor(dictionary=True, buffered=True)
+
+    try:
+        # Contrôle des stocks réels
+        for id_produit, quantite_demandee in panier.items():
+            cursor.execute("SELECT nom, stock FROM produits WHERE id=%s", (id_produit,))
+            produit = cursor.fetchone()
+            if not produit or produit['stock'] < quantite_demandee:
+                cursor.close()
+                return f"Erreur : Le produit '{produit['nom'] if produit else 'Inconnu'}' n'a plus assez de stock."
+
+        # Création de l'en-tête de commande
+        cursor.execute("INSERT INTO commandes (id_client, date_commande) VALUES (%s, NOW())", (id_client,))
+        id_commande = cursor.lastrowid
+        
+        # Injection des lignes et mise à jour des stocks
+        for id_produit, quantite_demandee in panier.items():
+            cursor.execute("SELECT prix FROM produits WHERE id=%s", (id_produit,))
+            produit = cursor.fetchone()
+            prix_unitaire = produit['prix']
             
             cursor.execute(
                 "INSERT INTO details_commandes (id_commande, id_produit, quantite, prix_unitaire) VALUES (%s, %s, %s, %s)", 
                 (id_commande, id_produit, quantite_demandee, prix_unitaire)
             )
-            
             cursor.execute("UPDATE produits SET stock = stock - %s WHERE id=%s", (quantite_demandee, id_produit))
-            db.commit()
-        except Exception as e:
-            db.rollback()
-            return f"Erreur lors de la commande : {e}"
-        finally:
-            cursor.close()
+            
+        db.commit()
+        session.pop('panier', None) # Libération du panier
+        
+    except Exception as e:
+        db.rollback()
+        return f"Erreur lors de la finalisation : {e}"
+    finally:
+        cursor.close()
 
-        return redirect(f"/client/{id_client}")
+    return redirect(f"/client/{id_client}")
 
 if __name__ == '__main__':
     print("Le serveur Flask démarre sur http://127.0.0.1:5000 ...")
