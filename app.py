@@ -2,11 +2,24 @@ from flask import Flask, render_template, request, redirect, session
 import mysql.connector
 # IMPORTATION : On ajoute la bibliothèque bcrypt pour vérifier le mot de passe
 import bcrypt
+# MODIFICATION : Importation de Flask-Mail pour l'envoi de e-mails
+from flask_mail import Mail, Message
 
 app = Flask(__name__)
 app.secret_key = 'une_cle_secrete_tres_complexe_a_changer'
 
-# Connexion BDD
+# MODIFICATION : Configuration de Flask-Mail (Exemple avec Gmail)
+# N'oublie pas de générer un "Mot de passe d'application" dans ton compte Google !
+app.config['MAIL_SERVER'] = 'smtp.gmail.com'
+app.config['MAIL_PORT'] = 587
+app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_USERNAME'] = 'votre_adresse_email@gmail.com'
+app.config['MAIL_PASSWORD'] = 'votre_mot_de_passe_d_application'
+app.config['MAIL_DEFAULT_SENDER'] = ('Magasin Informatique', 'votre_adresse_email@gmail.com')
+
+# Initialisation de l'extension Mail pour que la variable "mail" soit reconnue globalement
+mail = Mail(app)
+
 db = mysql.connector.connect(
     host="127.0.0.1",
     user="root",
@@ -32,7 +45,7 @@ def login():
             cursor.close()
             return redirect("/admin")
 
-        # MODIFICATION 1 : On cherche l'utilisateur UNIQUEMENT par son email
+        # On cherche l'utilisateur UNIQUEMENT par son email
         cursor.execute("SELECT * FROM clients WHERE email=%s", (email,))
         client = cursor.fetchone()
         cursor.close()
@@ -43,8 +56,14 @@ def login():
             # On convertit le mot de passe saisi en clair par l'utilisateur en bytes
             password_saisi_bytes = password.encode('utf-8')
 
-            # MODIFICATION 2 : On utilise bcrypt pour comparer le mot de passe en clair et le hash
+            # On utilise bcrypt pour comparer le mot de passe en clair et le hash
             if bcrypt.checkpw(password_saisi_bytes, hashed_password_bdd):
+                
+                # MODIFICATION : VÉRIFICATION DU STATUT DE VALIDATION DU MAIL
+                if client['is_verified'] == 0:
+                    return "Erreur login : Veuillez vérifier votre boîte mail et valider votre compte avant de vous connecter."
+                
+                # Si le compte est vérifié (is_verified == 1), on connecte l'utilisateur
                 session['client_id'] = client['id']
                 return redirect(f"/client/{client['id']}")
             else:
@@ -66,13 +85,13 @@ def inscription():
         telephone = request.form["telephone"]
         adresse = request.form["adresse"]
 
-        # VÉRIFICATION DE SÉCURITÉ : Minimum 12 caractères
+        # 1. VÉRIFICATION DE SÉCURITÉ : Minimum 12 caractères
         if len(password) < 12:
             return "Erreur : Le mot de passe doit contenir au moins 12 caractères."
 
         cursor = db.cursor(dictionary=True, buffered=True)
 
-        # 1. Vérifier si l'email existe déjà dans la base de données
+        # 2. Vérifier si l'email existe déjà dans la base de données
         cursor.execute("SELECT * FROM clients WHERE email=%s", (email,))
         compte_existant = cursor.fetchone()
 
@@ -80,19 +99,33 @@ def inscription():
             cursor.close()
             return "Erreur : Cet email est déjà utilisé par un autre compte."
 
-        # 2. Hachage du mot de passe avec bcrypt
+        # 3. Hachage du mot de passe avec bcrypt
         password_bytes = password.encode('utf-8')  # Conversion de la chaîne en bytes
         salt = bcrypt.gensalt()                     # Génération du sel de sécurité
-        hashed_password = bcrypt.hashpw(password_bytes, salt).decode('utf-8') # Hachage et conversion en chaîne de caractères
+        hashed_password = bcrypt.hashpw(password_bytes, salt).decode('utf-8') # Hachage et conversion en chaîne
 
-        # 3. Insertion du nouveau client dans la table 'clients'
+        # 4. Insertion du nouveau client dans la table 'clients' avec is_verified = 0
         try:
             cursor.execute("""
-                INSERT INTO clients (nom, prenom, email, password, telephone, adresse) 
-                VALUES (%s, %s, %s, %s, %s, %s)
-            """, (nom, prenom, email, hashed_password, telephone, adresse))
+                INSERT INTO clients (nom, prenom, email, password, telephone, adresse, is_verified) 
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """, (nom, prenom, email, hashed_password, telephone, adresse, 0)) # 0 = Non vérifié par défaut
             
             db.commit() # Validation de l'insertion en BDD
+            
+            # 5. Envoi de l'e-mail de confirmation d'inscription
+            try:
+                msg = Message(
+                    subject="Confirmation de votre inscription !",
+                    recipients=[email]  # Envoyer à l'adresse e-mail saisie par le client
+                )
+                msg.body = f"Bonjour {prenom},\n\nVotre inscription sur notre site de Magasin Informatique a bien été validée.\n\nMerci pour votre confiance !\nL'équipe de support."
+                
+                mail.send(msg)
+            except Exception as mail_error:
+                # On capture l'erreur pour éviter de bloquer l'utilisateur si le serveur d'e-mail a un problème
+                print(f"Erreur lors de l'envoi du mail : {mail_error}")
+
         except Exception as e:
             db.rollback() # En cas d'erreur de base de données, on annule
             return f"Erreur lors de l'inscription : {e}"
