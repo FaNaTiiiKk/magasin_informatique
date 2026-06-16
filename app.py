@@ -54,6 +54,55 @@ def login():
             
     return render_template("login.html")
 
+# INSCRIPTION (SIGN UP)
+@app.route("/inscription", methods=["GET", "POST"])
+def inscription():
+    if request.method == "POST":
+        # Récupération des données du formulaire HTML
+        nom = request.form["nom"]
+        prenom = request.form["prenom"]
+        email = request.form["email"]
+        password = request.form["password"]
+        telephone = request.form["telephone"]
+        adresse = request.form["adresse"]
+
+        cursor = db.cursor(dictionary=True, buffered=True)
+
+        # 1. Vérifier si l'email existe déjà dans la base de données
+        cursor.execute("SELECT * FROM clients WHERE email=%s", (email,))
+        compte_existant = cursor.fetchone()
+
+        if compte_existant:
+            cursor.close()
+            return "Erreur : Cet email est déjà utilisé par un autre compte."
+
+        # 2. Hachage du mot de passe avec bcrypt
+        password_bytes = password.encode('utf-8')  # Conversion de la chaîne en bytes
+        salt = bcrypt.gensalt()                     # Génération du sel de sécurité
+        hashed_password = bcrypt.hashpw(password_bytes, salt).decode('utf-8') # Hachage et conversion en chaîne de caractères
+
+        # 3. Insertion du nouveau client dans la table 'clients'
+        try:
+            # /!\ Important : Vérifie bien que les noms de colonnes ci-dessous 
+            # correspondent exactement à ceux de ta table MySQL
+            cursor.execute("""
+                INSERT INTO clients (nom, prenom, email, password, telephone, adresse) 
+                VALUES (%s, %s, %s, %s, %s, %s)
+            """, (nom, prenom, email, hashed_password, telephone, adresse))
+            
+            db.commit() # Validation de l'insertion en BDD
+        except Exception as e:
+            db.rollback() # En cas d'erreur de base de données, on annule
+            return f"Erreur lors de l'inscription : {e}"
+        finally:
+            cursor.close()
+
+        # Redirection automatique vers la page de connexion après inscription réussie
+        return redirect("/login")
+
+    # Si la requête est en GET (accès direct à l'URL), on affiche le formulaire
+    return render_template("inscription.html")
+
 # PAGE CLIENT
 @app.route("/client/<int:id_client>")
 def client(id_client):
