@@ -1,4 +1,6 @@
-/* STYLE GLOBAL */
+/* =========================================================================================
+   STYLE GLOBAL
+   ========================================================================================= */
 body {
      font-family: Arial, sans-serif;
      background: linear-gradient(to right, #eef2f3, #dfe9f3);
@@ -93,6 +95,7 @@ input {
      margin: 8px 0;
      border-radius: 6px;
      border: 1px solid #ccc;
+     box-sizing: border-box; /* Évite que l'input dépasse du cadre blanc */
 }
 
 /* BOUTON */
@@ -118,7 +121,7 @@ button:active {
      transform: scale(0.98);
 }
 
-/* CENTRAGE LOGIN */
+/* CENTRAGE LOGIN / INSCRIPTION / VALIDATION */
 .centrage-form {
      height: 100vh;
      display: flex;
@@ -135,10 +138,13 @@ button:active {
      width: 320px;
 }
 
-/* TITRE H2 DANS LOGIN */
+/* TITRE H2 DANS LOGIN / VALIDATION */
 .cadre-login h2 {
      background: none;
      color: #6a11cb;
+     box-shadow: none;
+     padding: 0;
+     margin-bottom: 20px;
 }
 
 /* LOGOUT */
@@ -146,4 +152,177 @@ button:active {
      position: absolute;
      top: 20px;
      right: 20px;
+}
+
+/* =========================================================================================
+   STYLE SPECIFIQUE PAGE VALIDATION (NOUVEAU)
+   ========================================================================================= */
+
+/* Texte d'explication sous le titre */
+.verification-text {
+     font-family: Arial, sans-serif;
+     font-size: 14px;
+     color: #555;
+     margin-bottom: 20px;
+     line-height: 1.4;
+}
+
+/* Rectangle avec le code secret (En dégradé comme tes boutons/titres) */
+.code-box {
+     background: linear-gradient(90deg, #6a11cb, #2575fc);
+     color: white;
+     font-size: 28px;
+     font-weight: bold;
+     letter-spacing: 8px; /* Écarte bien les chiffres pour le style */
+     padding: 15px;
+     border-radius: 12px;
+     margin: 20px 0;
+     box-shadow: 0px 4px 10px rgba(0,0,0,0.2);
+     display: block;
+}
+
+/* Message d'erreur si le code tapé est faux */
+.error-message {
+     color: #ff3333;
+     font-family: Arial, sans-serif;
+     font-size: 14px;
+     margin-bottom: 15px;
+     font-weight: bold;
+}
+
+/* Modifie l'input de saisie pour centrer le texte dedans */
+.input-code {
+     text-align: center;
+     font-size: 18px;
+     letter-spacing: 2px;
+}
+
+/* Annule le gros bouton bleu pour le lien "Recommencer" */
+.retry-text {
+     margin-top: 20px;
+     font-family: Arial, sans-serif;
+     font-size: 14px;
+     color: #333;
+}
+
+.retry-text a {
+     background: none;
+     color: #6a11cb;
+     padding: 0;
+     margin: 0;
+     display: inline;
+     text-decoration: underline;
+}
+
+.retry-text a:hover {
+     background: none;
+     color: #2575fc;
+}
+
+/* =========================================================================================
+   STYLE SPECIFIQUE PAGE PAIEMENT
+   ========================================================================================= */
+
+/* Cadre spécifique pour le paiement, un peu plus large (400px) */
+.cadre-paiement {
+     background: white;
+     padding: 40px 30px;
+     border-radius: 15px;
+     box-shadow: 0px 10px 25px rgba(0,0,0,0.3);
+     text-align: center;
+     width: 400px;
+}
+
+/* Enlève le style par défaut du H2 dans le cadre de paiement */
+.cadre-paiement h2 {
+     background: none;
+     color: #6a11cb;
+     box-shadow: none;
+     padding: 0;
+     margin-bottom: 20px;
+}
+
+/* Conteneur pour aligner l'expiration et le CVV côte à côte */
+.form-row-paiement {
+     display: flex;
+     gap: 10px;
+}
+
+/* Force les inputs de la ligne à prendre 50% chacun */
+.form-row-paiement input {
+     width: 50%;
+}
+
+/* Force le bouton de paiement à prendre toute la largeur du cadre */
+.btn-paiement {
+     width: 100%;
+     margin-top: 10px;
+}
+
+/* =========================================================================================
+   STYLE SPECIFIQUE PAGE FINALISATION (REÇU DE COMMANDE)
+   ========================================================================================= */
+
+/* Cadre pour le reçu de commande */
+.cadre-finalisation {
+     background: white;
+     padding: 40px 30px;
+     border-radius: 15px;
+     box-shadow: 0px 10px 25px rgba(0,0,0,0.3);
+     text-align: center;
+     width: 450px; /* Un poil plus large pour afficher proprement les puces */
+}
+
+/* Style pour le titre h2 de succès */
+.cadre-finalisation h2 {
+     background: linear-gradient(90deg, #27ae60, #2ecc71); /* Un beau dégradé vert pour le succès */
+     color: white;
+     padding: 15px;
+     border-radius: 10px;
+     font-size: 22px;
+     margin-bottom: 25px;
+     box-shadow: 0px 4px 10px rgba(0,0,0,0.15);
+}
+
+/* Texte de remerciement */
+.merci-text {
+     font-family: Arial, sans-serif;
+     font-size: 15px;
+     color: #333;
+     margin-bottom: 25px;
+     line-height: 1.5;
+}
+
+/* Bloc récapitulatif style liste facturation */
+.recap-liste {
+     background-color: #f8f9fa;
+     border-left: 4px solid #27ae60;
+     padding: 20px;
+     border-radius: 6px;
+     text-align: left; /* Aligné à gauche pour faire propre */
+     margin-bottom: 30px;
+}
+
+.recap-liste p {
+     margin: 10px 0;
+     font-family: Arial, sans-serif;
+     font-size: 14px;
+     color: #555;
+}
+
+.recap-liste strong {
+     color: #333;
+}
+
+/* Conteneur pour aligner tes deux boutons bleus l'un à côté de l'autre */
+.actions-finalisation {
+     display: flex;
+     justify-content: center;
+     gap: 10px;
+}
+
+.actions-finalisation a {
+     margin: 0; /* On reset les marges de base des liens */
+     font-size: 13px;
+     padding: 10px 14px;
 }

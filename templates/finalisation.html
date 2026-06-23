@@ -2,33 +2,36 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>Confirmation de commande</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Paiement Validé</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
 
-    <main class="confirmation-container">
-        <h1>Paiement validé !</h1>
+<div class="centrage-form">
+
+    <div class="cadre-finalisation">
+
+        <h2>Paiement Validé !</h2>
         
-        <p class="success-message">
-            Merci <strong>{{ nom }}</strong>, votre paiement simulé a été accepté avec succès.
+        <p class="merci-text">
+            Merci <strong>{{ nom }}</strong>, votre paiement simulé a été accepté avec succès et votre commande est en cours de préparation.
         </p>
 
-        <div class="order-details">
-            <h3>Récapitulatif de la commande</h3>
-            <ul>
-                <li><strong>Numéro de commande :</strong> {{ id_commande }}</li>
-                <li><strong>Total payé :</strong> {{ total_panier }} €</li>
-                <li><strong>Carte utilisée :</strong> **** **** **** {{ carte }}</li>
-            </ul>
+        <div class="recap-liste">
+            <p><strong>Numéro de commande :</strong> #{{ id_commande }}</p>
+            <p><strong>Total payé :</strong> {{ total_panier }} €</p>
+            <p><strong>Carte utilisée :</strong> **** **** **** {{ carte }}</p>
         </div>
 
-        <div class="navigation-links">
-            <a href="/client/{{ id_client }}" class="btn-secondary">Retour espace client</a>
-            <br><br>
-            <a href="/" class="btn-text">Retour à l'accueil</a>
+        <div class="actions-finalisation">
+            <a href="/client/{{ id_client }}/espace">Retour espace client</a>
+            <a href="/">Retour à l'accueil</a>
         </div>
-    </main>
+
+    </div>
+
+</div>
 
 </body>
 </html>

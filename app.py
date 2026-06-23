@@ -3,6 +3,7 @@ import mysql.connector
 import bcrypt
 from flask_mail import Mail, Message
 from datetime import date
+import random
 
 # Initialisation de l'application Flask
 app = Flask(__name__)
@@ -108,7 +109,7 @@ def login():
 
 
 # =========================================================================================
-# 📝 ENREGISTREMENT (INSCRIPTION)
+# 📝 ENREGISTREMENT (INSCRIPTION AVEC CODE DE VÉRIFICATION SIMULÉ)
 # =========================================================================================
 
 @app.route("/inscription", methods=["GET", "POST"])
@@ -131,45 +132,74 @@ def inscription():
         # Vérification anti-doublon : On s'assure que l'e-mail n'est pas déjà pris
         cursor.execute("SELECT * FROM clients WHERE email=%s", (email,))
         compte_existant = cursor.fetchone()
+        cursor.close()
 
         if compte_existant:
-            cursor.close()
             return "Erreur : Cet email est déjà utilisé par un autre compte."
 
-        # HACHAGE DU MOT DE PASSE : On ne stocke JAMAIS de mots de passe en clair en BDD
+        # HACHAGE DU MOT DE PASSE
         password_bytes = password.encode('utf-8')
-        salt = bcrypt.gensalt()  # Génère un "sel" aléatoire pour rendre le hachage unique
-        hashed_password = bcrypt.hashpw(password_bytes, salt).decode('utf-8')  # Crée le hash final
+        salt = bcrypt.gensalt()
+        hashed_password = bcrypt.hashpw(password_bytes, salt).decode('utf-8')
 
-        try:
-            # Insertion du nouveau client. Note : 'is_verified' est mis à 0 par défaut
-            cursor.execute("""
-                INSERT INTO clients (nom, prenom, email, password, telephone, adresse, is_verified) 
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
-            """, (nom, prenom, email, hashed_password, telephone, adresse, 0))
-            
-            db.commit()  # Validation définitive de l'insertion dans la base de données
-            
-            # Bloc d'envoi du mail de bienvenue (encapsulé dans un try/except pour ne pas bloquer l'inscription si le serveur mail échoue)
-            try:
-                msg = Message(
-                    subject="Confirmation de votre inscription !",
-                    recipients=[email]
-                )
-                msg.body = f"Bonjour {prenom},\n\nVotre inscription sur notre site de Magasin Informatique a bien été validée.\n\nMerci pour votre confiance !\nL'équipe de support."
-                mail.send(msg)  # Envoi réel du mail
-            except Exception as mail_error:
-                print(f"Erreur lors de l'envoi du mail : {mail_error}")
+        # GÉNÉRATION DU CODE DE VALIDATION SÉCURISÉ (4 chiffres)
+        code_validation = str(random.randint(1000, 9999))
 
-        except Exception as e:
-            db.rollback()  # En cas d'erreur SQL, on annule l'opération pour ne pas corrompre la BDD
-            return f"Erreur lors de l'inscription : {e}"
-        finally:
-            cursor.close()  # Fermeture propre du curseur SQL dans tous les cas
+        # On stocke temporairement TOUTES les infos et le code dans la session Flask
+        session['inscription_temp'] = {
+            'nom': nom,
+            'prenom': prenom,
+            'email': email,
+            'password': hashed_password,
+            'telephone': telephone,
+            'adresse': adresse,
+            'code': code_validation
+        }
 
-        return redirect("/login")
+        # On redirige vers la page où il devra taper le code
+        return redirect("/verification")
 
     return render_template("inscription.html")
+
+
+@app.route("/verification", methods=["GET", "POST"])
+def verification():
+    # Sécurité : Si l'utilisateur accède à la page sans avoir rempli le formulaire d'inscription
+    if 'inscription_temp' not in session:
+        return redirect("/inscription")
+
+    infos = session['inscription_temp']
+    code_attendu = infos['code']
+
+    if request.method == "POST":
+        code_saisi = request.form.get("code_saisi").strip()
+
+        # Si le code est bon, on l'inscrit définitivement en BDD avec is_verified = 1
+        if code_saisi == code_attendu:
+            cursor = db.cursor(dictionary=True, buffered=True)
+            try:
+                cursor.execute("""
+                    INSERT INTO clients (nom, prenom, email, password, telephone, adresse, is_verified) 
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                """, (infos['nom'], infos['prenom'], infos['email'], infos['password'], infos['telephone'], infos['adresse'], 1))
+                
+                db.commit()
+                
+                # Inscription réussie : on nettoie la session temporaire
+                session.pop('inscription_temp', None)
+                return redirect("/login")
+
+            except Exception as e:
+                db.rollback()
+                return f"Erreur lors de la validation finale : {e}"
+            finally:
+                cursor.close()
+        else:
+            # Code faux : on réaffiche la page avec une erreur
+            return render_template("verification.html", code=code_attendu, erreur="Code incorrect. Veuillez réessayer.")
+
+    # En GET : On affiche la page avec le code généré directement visible à l'écran
+    return render_template("verification.html", code=code_attendu)
 
 
 # =========================================================================================

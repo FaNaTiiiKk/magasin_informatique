@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vérification du compte</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<div class="centrage-form">
+
+    <div class="cadre-login">
+
+        <h2>Validation</h2>
+        
+        <p class="verification-text">
+            Pour valider votre inscription, veuillez saisir le code de sécurité affiché ci-dessous.
+        </p>
+
+        <div class="code-box">
+            {{ code }}
+        </div>
+
+        {% if erreur %}
+            <p class="error-message">⚠️ {{ erreur }}</p>
+        {% endif %}
+
+        <form action="/verification" method="POST">
+            <input type="text" name="code_saisi" placeholder="Code à 4 chiffres" maxlength="4" required class="input-code"><br>
+            
+            <button type="submit">Valider et créer mon compte</button>
+        </form>
+
+        <p class="retry-text">
+            Un problème ? <a href="/inscription">Recommencer</a>
+        </p>
+
+    </div>
+
+</div>
+
+</body>
+</html>

@@ -2,50 +2,47 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>Paiement</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Paiement Sécurisé</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
 
-    <main>
-        <h1>Paiement</h1>
+<div class="centrage-form">
+
+    <div class="cadre-paiement">
+
+        <h2>Paiement Sécurisé</h2>
         
-        <a href="/panier/{{ id_client }}">Retour au panier</a>
+        <div class="code-box" style="font-size: 22px; letter-spacing: 0px;">
+            Total à payer : {{ total_panier }} €
+        </div>
 
         {% if erreur %}
-            <p style="color: red; font-weight: bold;">{{ erreur }}</p>
+            <p class="error-message">⚠️ {{ erreur }}</p>
         {% endif %}
 
-        <h2>Total à payer : {{ total_panier }} €</h2>
+        <form action="/paiement/{{ id_client }}" method="POST">
+            
+            <input type="text" name="nom" placeholder="Nom du titulaire de la carte" required><br>
+            
+            <input type="text" name="numero" placeholder="Numéro de carte (16 chiffres)" maxlength="16" required><br>
+            
+            <div class="form-row-paiement">
+                <input type="text" name="expiration" placeholder="MM/AA" maxlength="5" required>
+                <input type="text" name="cvv" placeholder="CVV" maxlength="3" required>
+            </div>
+            
+            <button type="submit" class="btn-paiement">Valider le paiement</button>
+        </form>
 
-        {% if produits %}
-            <form method="POST">
-                <div class="form-group">
-                    <label for="nom">Nom titulaire</label>
-                    <input type="text" id="nom" name="nom" required>
-                </div>
+        <p class="retry-text">
+            <a href="/client/{{ id_client }}/panier">Retour au panier</a>
+        </p>
 
-                <div class="form-group">
-                    <label for="numero">Numéro carte</label>
-                    <input type="text" id="numero" name="numero" maxlength="19" placeholder="1111 2222 3333 4444" required>
-                </div>
+    </div>
 
-                <div class="form-group">
-                    <label for="expiration">Date expiration</label>
-                    <input type="text" id="expiration" name="expiration" placeholder="MM/AA" required>
-                </div>
-
-                <div class="form-group">
-                    <label for="cvv">CVV</label>
-                    <input type="text" id="cvv" name="cvv" maxlength="4" required>
-                </div>
-
-                <button type="submit">Valider le paiement</button>
-            </form>
-        {% else %}
-            <p>Impossible de payer : votre panier est vide.</p>
-        {% endif %}
-    </main>
+</div>
 
 </body>
 </html>
