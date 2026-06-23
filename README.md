@@ -60,9 +60,9 @@ pip install flask mysql-connector-python bcrypt flask-mail
 ```
 
 4. Database Setup (MySQL):
-```text
+
 Open MySQL Workbench, connect to your local server, and execute the following initialization script to build the schema:
-```
+
 
 ```text
 DROP DATABASE IF EXISTS magasin_informatique;
