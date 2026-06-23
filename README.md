@@ -1,55 +1,59 @@
-# 🛒 Application E-Commerce Flask #
+# 🛒 Magasin Informatique - E-commerce Web App
 
-Ce projet est une application web e-commerce dynamique développée en Python avec le framework Flask et une base de données MySQL. Elle intègre un catalogue de produits, un système de panier d'achat géré en session, un tunnel de commande avec récapitulatif de livraison, et une simulation de paiement sécurisé.
+A dynamic e-commerce web application built with Flask and MySQL. This project simulates a computer hardware store, featuring user authentication, shopping cart management, a checkout system with shipping review, and simulated secure payment.
 
 ---
 
-📂 Architecture simplifiée du projet
-Plaintext
-├── app.py                 # Serveur Flask & Logique Backend (Routes, SQL, Sessions)
-├── static/
-│   ├── style.css          # Feuille de style CSS globale (Design unifié)
-│   └── fond.jpg           # Image de fond pour la page d'accueil
-└── templates/             # Pages HTML du projet
-    ├── inscription.html   # Formulaire de création de compte
-    ├── verification.html  # Écran de validation par code de sécurité
-    ├── paiement.html      # Formulaire de carte bancaire (Design Carte)
-    └── finalisation.html  # Reçu de paiement et succès de la commande
+## ✨ Features
 
-## Prérequis ##
+* **User Authentication:** Secure signup with password hashing (bcrypt) and simulated account verification via a 4-digit security code.
+* **Shopping Cart:** Temporary items management handled smoothly through Flask browser sessions.
+* **Checkout & Payment:** Order summary, shipping address handling, and a custom-designed secure credit card payment simulation.
 
-Avant de commencer, assurez-vous d'avoir installé sur votre machine :
+---
+
+## 🛠️ Tech Stack
+
+* **Backend:** Python 3.8+, Flask
+* **Database:** MySQL Server
+* **Frontend:** HTML5, CSS3 (Custom responsive UI)
+* **Tools:** MySQL Workbench (for database management)
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+Before starting, ensure you have the following installed on your machine:
 * [Python 3.8+](https://www.python.org/)
 * [MySQL Server](https://dev.mysql.com/downloads/mysql/)
-* [MySQL Workbench](https://dev.mysql.com/downloads/workbench/) (recommandé pour la gestion visuelle de la BDD)
+* [MySQL Workbench](https://dev.mysql.com/downloads/workbench/)
 
----
+### Installation & Run
 
-## Installation et Configuration ##
+1. Clone the repository and navigate to the project directory:
+   ```bash
+   git clone https://github.com/FaNaTiiiKk/magasin_informatique.git
+   cd magasin_informatique
+Create and activate a virtual environment:
 
-Suivez pas à pas les étapes ci-dessous pour cloner, installer et lancer le projet dans votre environnement local.
-
-### 1. Récupérer le projet ###
-
-git clone https://github.com/FaNaTiiiKk/magasin_informatique.git
-cd magasin_informatique
-
-### 2. Créer et activer un environnement Virtuel ###
-
-# Sur Windows
+Bash
+# On Windows
 python -m venv venv
 venv\Scripts\activate
 
-# Sur macOS / Linux
+# On macOS / Linux
 python3 -m venv venv
 source venv/bin/activate
+Install the required Python dependencies:
 
-### 3. Installer les dépendances Python ###
-
+Bash
 pip install flask mysql-connector-python bcrypt flask-mail
+Database Setup (MySQL):
+Open MySQL Workbench, connect to your local server, and execute the following initialization script to build the schema:
 
-### 4. Création de la base de donnée ###
-
+SQL
 DROP DATABASE IF EXISTS magasin_informatique;
 CREATE DATABASE magasin_informatique;
 USE magasin_informatique;
@@ -59,9 +63,10 @@ CREATE TABLE clients (
     nom VARCHAR(50) NOT NULL,
     prenom VARCHAR(50) NOT NULL,
     email VARCHAR(100) NOT NULL UNIQUE,
-    password VARCHAR(255) NOT NULL, -- Taille augmentée à 255 pour accueillir les futurs hashs
+    password VARCHAR(255) NOT NULL,
     adresse VARCHAR(150),
     telephone VARCHAR(20),
+    is_verified TINYINT(1) DEFAULT 0,
     PRIMARY KEY (id)
 );
 
@@ -110,19 +115,39 @@ CREATE TABLE panier (
     UNIQUE (id_client, id_produit),
     CHECK (quantite > 0)
 );
+Configure Database Credentials:
+Open app.py and update the MySQL connection block with your local setup:
 
-### 5. Lier l'application à votre BDD ###
-
+Python
 db = mysql.connector.connect(
     host="localhost",
-    user="VOTRE_UTILISATEUR_MYSQL",  # Exemple: root
-    password="VOTRE_MOT_DE_PASSE",
-    database="NOM_DE_VOTRE_BDD"
+    user="YOUR_MYSQL_USER",       # e.g., root
+    password="YOUR_MYSQL_PASSWORD",
+    database="magasin_informatique"
 )
+Start the Local Server:
 
-### 6. Lancement de l'Application ###
-
+Bash
 python app.py
+🌐 Access Points
+Once the application server is running, access it via your web browser:
 
-### Le terminal affichera que l'application tourne localement. Ouvrez votre navigateur et rendez-vous à l'adresse suivante : ###
-👉 http://127.0.0.1:5000
+Main Web Application: http://127.0.0.1:5000
+
+🧪 Testing the Application
+Simulated Mail Verification: During registration, a 4-digit security code is displayed directly on the screen for development purposes. Enter this code to immediately set the account status to is_verified = 1 in the database.
+
+Checkout Simulation: Browse the catalogue, add hardware items to your cart, and head over to the payment page. You can input any simulated dummy credit card credentials to successfully complete and generate your order receipt.
+
+📁 Project Structure
+Plaintext
+magasin_informatique/
+├── app.py                 # Main Flask application and backend routing logic
+├── static/
+│   ├── style.css          # Global unified stylesheet
+│   └── fond.jpg           # Application background image
+└── templates/             # HTML UI templates
+    ├── inscription.html   # Account registration form
+    ├── verification.html  # Security code validation screen
+    ├── paiement.html      # Credit card payment checkout form
+    └── finalisation.html  # Order invoice and payment success screen
