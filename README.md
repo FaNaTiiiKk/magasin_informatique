@@ -4,8 +4,8 @@ Ce projet est une application web e-commerce dynamique développée en Python av
 
 ---
 
-Architecture simplifiée du projet
-
+📂 Architecture simplifiée du projet
+Plaintext
 ├── app.py                 # Serveur Flask & Logique Backend (Routes, SQL, Sessions)
 ├── static/
 │   ├── style.css          # Feuille de style CSS globale (Design unifié)
