@@ -35,8 +35,9 @@ Before starting, ensure you have the following installed on your machine:
 1. Clone the repository and navigate to the project directory:
 
 ```bash
-git clone [https://github.com/FaNaTiiiKk/magasin_informatique.git](https://github.com/FaNaTiiiKk/magasin_informatique.git)
+git clone https://github.com/FaNaTiiiKk/magasin_informatique.git
 cd magasin_informatique
+```
 
 2. Create and activate a virtual environment:
 
@@ -130,6 +131,7 @@ db = mysql.connector.connect(
     password="YOUR_MYSQL_PASSWORD",
     database="magasin_informatique"
 )
+```
 
 6. Start the Local Server:
 
@@ -140,7 +142,7 @@ python app.py
 ## 🌐 Access Points
 
 Once the application server is running, access it via your web browser:
-* Main Web Application: [http://127.0.0.1:5000](http://127.0.0.1:5000)
+* Main Web Application: http://127.0.0.1:5000
 
 ---
 
@@ -164,3 +166,4 @@ magasin_informatique/
     ├── verification.html  # Security code validation screen
     ├── paiement.html      # Credit card payment checkout form
     └── finalisation.html  # Order invoice and payment success screen
+```
