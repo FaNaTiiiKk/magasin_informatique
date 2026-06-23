@@ -46,3 +46,15 @@ CREATE TABLE details_commandes (
     FOREIGN KEY (id_produit) REFERENCES produits(id),
     CHECK (quantite > 0)
 );
+
+CREATE TABLE panier (
+    id INT AUTO_INCREMENT,
+    id_client INT NOT NULL,
+    id_produit INT NOT NULL,
+    quantite INT NOT NULL DEFAULT 1,
+    PRIMARY KEY (id),
+    FOREIGN KEY (id_client) REFERENCES clients(id),
+    FOREIGN KEY (id_produit) REFERENCES produits(id),
+    UNIQUE (id_client, id_produit),
+    CHECK (quantite > 0)
+);

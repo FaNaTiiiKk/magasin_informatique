@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Confirmation de commande</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+    <main class="confirmation-container">
+        <h1>Paiement validé !</h1>
+        
+        <p class="success-message">
+            Merci <strong>{{ nom }}</strong>, votre paiement simulé a été accepté avec succès.
+        </p>
+
+        <div class="order-details">
+            <h3>Récapitulatif de la commande</h3>
+            <ul>
+                <li><strong>Numéro de commande :</strong> {{ id_commande }}</li>
+                <li><strong>Total payé :</strong> {{ total_panier }} €</li>
+                <li><strong>Carte utilisée :</strong> **** **** **** {{ carte }}</li>
+            </ul>
+        </div>
+
+        <div class="navigation-links">
+            <a href="/client/{{ id_client }}" class="btn-secondary">Retour espace client</a>
+            <br><br>
+            <a href="/" class="btn-text">Retour à l'accueil</a>
+        </div>
+    </main>
+
+</body>
+</html>

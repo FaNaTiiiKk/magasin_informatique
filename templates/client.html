@@ -1,8 +1,12 @@
 <head>
-<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
-<h2>Espace Client</h2>
 
+<h1>Espace Client</h1>
+
+{% if client %}
+    <h2>Bonjour {{ client.prenom }} {{ client.nom }}</h2>
+{% endif %}
 <a href="/">Se déconnecter</a>
 
 <br><br>
@@ -14,17 +18,17 @@
 <h3>Mes produits achetés</h3>
 
 <table border="1">
-<tr>
-    <th>Produit</th>
-    <th>Prix</th>
-    <th>Quantité</th>
-</tr>
+    <tr>
+        <th>Produit</th>
+        <th>Prix</th>
+        <th>Quantité</th>
+    </tr>
 
-{% for p in produits %}
-<tr>
-    <td>{{ p.nom }}</td>
-    <td>{{ p.prix }}</td>
-    <td>{{ p.quantite }}</td>
-</tr>
-{% endfor %}
+    {% for p in produits %}
+    <tr>
+        <td>{{ p.nom }}</td>
+        <td>{{ p.prix }}</td>
+        <td>{{ p.quantite }}</td>
+    </tr>
+    {% endfor %}
 </table>

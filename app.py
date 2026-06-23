@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, redirect, session
 import mysql.connector
 import bcrypt
 from flask_mail import Mail, Message
+from datetime import date
 
 # Initialisation de l'application Flask
 app = Flask(__name__)
@@ -37,6 +38,10 @@ db = mysql.connector.connect(
     password="130321",
     database="magasin_informatique"
 )
+
+def get_db():
+    """Fonction utilitaire pour renvoyer l'instance globale de la BDD"""
+    return db
 
 
 # =========================================================================================
@@ -168,7 +173,7 @@ def inscription():
 
 
 # =========================================================================================
-# 👤 ESPACE CLIENT (HISTORIQUE DES COMMANDES)
+# 👤 ESPACE CLIENT (HISTORIQUE DES COMMANDES / INTEGRÉ CORRIGÉ)
 # =========================================================================================
 
 @app.route("/client/<int:id_client>")
@@ -179,18 +184,23 @@ def client(id_client):
         
     cursor = db.cursor(dictionary=True, buffered=True)
     
-    # Requête avec de multiples JOIN permettant de récupérer l'historique complet des achats passés de ce client précis
+    # 1. On va chercher les infos du client connecté (pour le "Bonjour Prenom Nom")
+    cursor.execute("SELECT nom, prenom FROM clients WHERE id=%s", (id_client,))
+    client_info = cursor.fetchone()
+    
+    # 2. Requête permettant de récupérer l'historique complet, incluant produits.stock et produits.id
     cursor.execute("""
-        SELECT produits.nom, produits.prix, details_commandes.quantite
+        SELECT produits.id, produits.nom, produits.prix, produits.stock, details_commandes.quantite
         FROM commandes
         JOIN details_commandes ON commandes.id = details_commandes.id_commande
         JOIN produits ON produits.id = details_commandes.id_produit
         WHERE commandes.id_client = %s
     """, (id_client,))
-    produits = cursor.fetchall()  # Récupère toutes les lignes d'achats trouvées
+    produits = cursor.fetchall()  # Récupère toutes les lignes trouvées
     cursor.close()
     
-    return render_template("client.html", produits=produits, id_client=id_client)
+    # On transmet maintenant "client=client_info" pour éviter l'absence de l'objet dans Jinja2
+    return render_template("client.html", produits=produits, id_client=id_client, client=client_info)
 
 
 # =========================================================================================
@@ -381,7 +391,7 @@ def finaliser_panier(id_client):
                 (id_commande, id_produit, quantite_demandee, prix_unitaire)
             )
             
-            # 3. MISE À JOUR DU STOCK PRODUIT : On déduit la quantité achetée directement du stock de la table 'produits'
+            # 3. MISE À JOURS DU STOCK PRODUIT : On déduit la quantité achetée directement du stock de la table 'produits'
             cursor.execute("UPDATE produits SET stock = stock - %s WHERE id=%s", (quantite_demandee, id_produit))
             
         # Si tout s'est bien passé sans plantage, on valide définitivement l'ensemble de la transaction SQL
@@ -401,6 +411,122 @@ def finaliser_panier(id_client):
     # Redirection finale vers l'espace client (où le client pourra voir son historique d'achats actualisé)
     return redirect(f"/client/{id_client}")
 
+
+# =========================================================================================
+# 💳 PROCESSUS DE PAIEMENT SÉCURISÉ ET VALIDATION DE COMMANDE
+# =========================================================================================
+
+@app.route("/paiement/<int:id_client>", methods=["GET", "POST"])
+def paiement(id_client):
+    if 'client_id' not in session or session['client_id'] != id_client:
+        return redirect("/login")
+
+    # 1. On récupère le panier depuis la SESSION Flask au lieu de la table SQL
+    panier = session.get('panier', {})
+    liste_produits_panier = []
+    total_panier = 0
+
+    cursor = db.cursor(dictionary=True, buffered=True)
+    
+    # 2. Si le panier en session contient des produits, on va chercher leurs infos en BDD (Nom, Prix, Stock)
+    if panier:
+        for id_produit, quantite in panier.items():
+            cursor.execute("SELECT id, nom, prix, stock FROM produits WHERE id=%s", (id_produit,))
+            produit = cursor.fetchone()
+            if produit:
+                subtotal = produit['prix'] * quantite
+                total_panier += subtotal
+                liste_produits_panier.append({
+                    'id_produit': produit['id'],
+                    'nom': produit['nom'],
+                    'prix': produit['prix'],
+                    'stock': produit['stock'],
+                    'quantite': quantite,
+                    'total': subtotal
+                })
+
+    if request.method == "POST":
+        nom = request.form["nom"].strip()
+        numero = request.form["numero"].replace(" ", "").replace("-", "")
+        expiration = request.form["expiration"].strip()
+        cvv = request.form["cvv"].strip()
+        
+        # Vérification de sécurité : Panier vide
+        if not liste_produits_panier:
+            cursor.close()
+            return render_template(
+                "paiement.html",
+                id_client=id_client,
+                produits=liste_produits_panier,
+                total_panier=total_panier,
+                erreur="Votre panier est vide."
+            )
+        
+        # Validation des données de la carte bancaire (Simulation bancaire)
+        if not nom or not numero.isdigit() or len(numero) != 16 or not expiration or not cvv.isdigit() or len(cvv) not in (3, 4):
+            cursor.close()
+            return render_template(
+                "paiement.html",
+                id_client=id_client,
+                produits=liste_produits_panier,
+                total_panier=total_panier,
+                erreur="Paiement refusé : vérifiez les informations de la carte."
+            )
+        
+        # Contrôle ultime des stocks physiques en BDD avant transaction
+        for produit in liste_produits_panier:
+            if produit["stock"] < produit["quantite"]:
+                cursor.close()
+                return render_template(
+                    "paiement.html",
+                    id_client=id_client,
+                    produits=liste_produits_panier,
+                    total_panier=total_panier,
+                    erreur=f"Stock insuffisant pour {produit['nom']}."
+                )
+        
+        # 1. Écriture en base de données : Enregistrement de la commande principale
+        cursor.execute("""
+            INSERT INTO commandes (id_client, date_commande, total, statut)
+            VALUES (%s, NOW(), %s, %s)
+        """, (id_client, total_panier, "Validée"))
+        id_commande = cursor.lastrowid
+        
+        # 2. Boucle d'enregistrement des détails de la commande et mise à jour des stocks
+        for produit in liste_produits_panier:
+            cursor.execute("""
+                INSERT INTO details_commandes (id_commande, id_produit, quantite, prix_unitaire)
+                VALUES (%s, %s, %s, %s)
+            """, (id_commande, produit["id_produit"], produit["quantite"], produit["prix"]))
+            
+            cursor.execute("""
+                UPDATE produits
+                SET stock = stock - %s
+                WHERE id = %s
+            """, (produit["quantite"], produit["id_produit"]))
+            
+        # 3. Nettoyage final : On valide les écritures SQL et on vide le panier de la session
+        db.commit()
+        cursor.close()
+        session.pop('panier', None)
+        
+        # Redirection et affichage sur le template finalisation
+        return render_template(
+            "finalisation.html",
+            nom=nom,
+            id_client=id_client,
+            id_commande=id_commande,
+            total_panier=total_panier,
+            carte=numero[-4:]
+        )
+        
+    cursor.close()
+    return render_template(
+        "paiement.html",
+        id_client=id_client,
+        produits=liste_produits_panier,
+        total_panier=total_panier
+    )
 
 # =========================================================================================
 # 🏁 POINT D'ENTRÉE APPLICATION
