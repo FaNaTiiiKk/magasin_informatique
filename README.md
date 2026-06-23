@@ -34,6 +34,7 @@ Before starting, ensure you have the following installed on your machine:
 
 1. Clone the repository and navigate to the project directory:
 
+```bash
 git clone [https://github.com/FaNaTiiiKk/magasin_informatique.git](https://github.com/FaNaTiiiKk/magasin_informatique.git)
 cd magasin_informatique
 
@@ -54,6 +55,8 @@ pip install flask mysql-connector-python bcrypt flask-mail
 4. Database Setup (MySQL):
 Open MySQL Workbench, connect to your local server, and execute the following initialization script to build the schema:
 
+```text
+```sql
 DROP DATABASE IF EXISTS magasin_informatique;
 CREATE DATABASE magasin_informatique;
 USE magasin_informatique;
@@ -119,6 +122,8 @@ CREATE TABLE panier (
 5. Configure Database Credentials:
 Open app.py and update the MySQL connection block with your local setup:
 
+```text
+```python
 db = mysql.connector.connect(
     host="localhost",
     user="YOUR_MYSQL_USER",
@@ -148,6 +153,7 @@ Once the application server is running, access it via your web browser:
 
 ## 📁 Project Structure
 
+```text
 magasin_informatique/
 ├── app.py                 # Main Flask application and backend routing logic
 ├── static/
