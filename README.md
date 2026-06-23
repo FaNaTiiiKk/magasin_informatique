@@ -42,22 +42,29 @@ cd magasin_informatique
 2. Create and activate a virtual environment:
 
 # On Windows
+```python
 python -m venv venv
 venv\Scripts\activate
+```
 
 # On macOS / Linux
+```python
 python3 -m venv venv
 source venv/bin/activate
+```
 
 3. Install the required Python dependencies:
 
+```python
 pip install flask mysql-connector-python bcrypt flask-mail
+```
 
 4. Database Setup (MySQL):
+```text
 Open MySQL Workbench, connect to your local server, and execute the following initialization script to build the schema:
+```
 
 ```text
-```sql
 DROP DATABASE IF EXISTS magasin_informatique;
 CREATE DATABASE magasin_informatique;
 USE magasin_informatique;
