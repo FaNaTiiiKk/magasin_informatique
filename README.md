@@ -17,7 +17,7 @@ A dynamic e-commerce web application built with Flask and MySQL. This project si
 * **Backend:** Python 3.8+, Flask
 * **Database:** MySQL Server
 * **Frontend:** HTML5, CSS3 (Custom responsive UI)
-* **Tools:** MySQL Workbench (for database management)
+* **Tools:** MySQL Workbench
 
 ---
 
@@ -26,19 +26,19 @@ A dynamic e-commerce web application built with Flask and MySQL. This project si
 ### Prerequisites
 
 Before starting, ensure you have the following installed on your machine:
-* [Python 3.8+](https://www.python.org/)
-* [MySQL Server](https://dev.mysql.com/downloads/mysql/)
-* [MySQL Workbench](https://dev.mysql.com/downloads/workbench/)
+* Python 3.8+
+* MySQL Server
+* MySQL Workbench
 
 ### Installation & Run
 
 1. Clone the repository and navigate to the project directory:
-   ```bash
-   git clone https://github.com/FaNaTiiiKk/magasin_informatique.git
-   cd magasin_informatique
-Create and activate a virtual environment:
 
-Bash
+git clone [https://github.com/FaNaTiiiKk/magasin_informatique.git](https://github.com/FaNaTiiiKk/magasin_informatique.git)
+cd magasin_informatique
+
+2. Create and activate a virtual environment:
+
 # On Windows
 python -m venv venv
 venv\Scripts\activate
@@ -46,14 +46,14 @@ venv\Scripts\activate
 # On macOS / Linux
 python3 -m venv venv
 source venv/bin/activate
-Install the required Python dependencies:
 
-Bash
+3. Install the required Python dependencies:
+
 pip install flask mysql-connector-python bcrypt flask-mail
-Database Setup (MySQL):
+
+4. Database Setup (MySQL):
 Open MySQL Workbench, connect to your local server, and execute the following initialization script to build the schema:
 
-SQL
 DROP DATABASE IF EXISTS magasin_informatique;
 CREATE DATABASE magasin_informatique;
 USE magasin_informatique;
@@ -115,32 +115,39 @@ CREATE TABLE panier (
     UNIQUE (id_client, id_produit),
     CHECK (quantite > 0)
 );
-Configure Database Credentials:
+
+5. Configure Database Credentials:
 Open app.py and update the MySQL connection block with your local setup:
 
-Python
 db = mysql.connector.connect(
     host="localhost",
-    user="YOUR_MYSQL_USER",       # e.g., root
+    user="YOUR_MYSQL_USER",
     password="YOUR_MYSQL_PASSWORD",
     database="magasin_informatique"
 )
-Start the Local Server:
 
-Bash
+6. Start the Local Server:
+
 python app.py
-🌐 Access Points
+
+---
+
+## 🌐 Access Points
+
 Once the application server is running, access it via your web browser:
+* Main Web Application: [http://127.0.0.1:5000](http://127.0.0.1:5000)
 
-Main Web Application: http://127.0.0.1:5000
+---
 
-🧪 Testing the Application
-Simulated Mail Verification: During registration, a 4-digit security code is displayed directly on the screen for development purposes. Enter this code to immediately set the account status to is_verified = 1 in the database.
+## 🧪 Testing the Application
 
-Checkout Simulation: Browse the catalogue, add hardware items to your cart, and head over to the payment page. You can input any simulated dummy credit card credentials to successfully complete and generate your order receipt.
+* 📝 **Simulated Mail Verification:** During registration, a 4-digit security code is displayed directly on the screen for development purposes. Enter this code to immediately set the account status to is_verified = 1 in the database.
+* 💳 **Checkout Simulation:** Browse the catalogue, add hardware items to your cart, and head over to the payment page. You can input any simulated dummy credit card credentials to successfully complete and generate your order receipt.
 
-📁 Project Structure
-Plaintext
+---
+
+## 📁 Project Structure
+
 magasin_informatique/
 ├── app.py                 # Main Flask application and backend routing logic
 ├── static/
